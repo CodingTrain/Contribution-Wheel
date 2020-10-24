@@ -18,7 +18,9 @@ let displayDiv;
 let closeButton;
 let split;
 let selectedData;
-
+const baseUrl = "https://the-coding-train-api.vercel.app/challenge";
+let challengeCount;
+let videos;
 let drumroll;
 let fanfare;
 
@@ -27,7 +29,12 @@ const pmouse = () => createVector(pmouseX - width / 2, pmouseY - height / 2);
 
 function preload() {
 	// Loading the contributions
-	data = loadJSON("superdata-2.json", j => (data = j));
+	// data = loadJSON("superdata-2.json", j => (data = j));
+	(async () => {
+		const challengeResponse = await fetch(baseUrl);
+		const challengeJson = await challengeResponse.json();
+		videos = challengeJson.videos;
+	})();
 	// Loading Soundfiles
 	soundFormats("mp3");
 	// drumroll CC0: https://freesound.org/people/bigjoedrummer/sounds/77305/
@@ -37,13 +44,24 @@ function preload() {
 	fanfare.playMode("untilDone");
 }
 
-const getNumbers = () => {
-	const shuffled = data.sort(() => random(-1, 1));
-
+const getNumbers = async () => {
+	data = []
+	const shuffled = Object.keys([...Array(Math.max(videos?.length || 0, 10))])
+		.sort(() => random(-1, 1))
+		.map(n => +n + 1);
 	// Get sub-array of first n elements after shuffled
 	selectedData = shuffled.slice(0, 10);
-	total = min(10, data.length);
-	numbers = [...Array(total).keys()].map(val => val + 1);
+	total = 10;
+	for (let i = 0; i < total; i++) {
+		try {
+			const response = await fetch(videos[i].apiUrl);
+			const json = await response.json();
+			data = [...data, ...json.contributions]
+		} catch (err) {
+			console.log(err.message);
+		}
+	}
+	console.log(data)
 	sectionSize = TWO_PI / total;
 	loadColors();
 };
@@ -268,19 +286,12 @@ function drawArcs() {
 		translate(size * 1.75 + n, size * 1.75 + n);
 		rotate(-t);
 		rotate(QUARTER_PI / 1.75);
-		// rotate(-QUARTER_PI);
-		// rotate(PI);
-		// rotate(HALF_PI);
-		// rotate(t);
+
 		stroke(0, 100);
-		//strokeWeight(sw/2);
 		strokeWeight(2);
 		fill(255);
-		//noStroke();
 		textSize(15);
-		// Contribution Number
-		//text(txt, 0, 0);
-		// Contribution title
+
 		text(title, 0, 0, 100, 100);
 		pop();
 		fill(c);
